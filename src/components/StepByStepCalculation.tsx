@@ -72,25 +72,35 @@ export const StepByStepCalculation = ({
     if (currentStep === 0) {
       return `Step 1: Load inputs - A = ${binaryA} (${inputA}), B = ${binaryB} (${inputB})`;
     } else if (currentStep === 1) {
-      return `Step 2: Control signal set for ${operation} operation`;
+      return `Step 2: Control signal set for ${operation} operation (LSB to MSB processing)`;
     } else if (currentStep < totalSteps - 1) {
-      const bitIndex = currentStep - 2;
+      const bitPos = currentStep - 2; // 0 to 7, representing bit position from LSB
+      const stringIdx = 7 - bitPos; // Convert to string index (right to left)
+      
       if (isArithmetic && operation === 'ADD') {
-        const bitA = binaryA[bitIndex];
-        const bitB = binaryB[bitIndex];
-        const carryIn = carries[bitIndex];
+        const bitA = binaryA[stringIdx];
+        const bitB = binaryB[stringIdx];
+        const carryIn = carries[bitPos];
         const sum = parseInt(bitA) + parseInt(bitB) + carryIn;
         const resultBit = sum % 2;
         const carryOut = sum > 1 ? 1 : 0;
-        return `Step ${currentStep + 1}: Bit ${7 - bitIndex}: ${bitA} + ${bitB} + carry(${carryIn}) = ${resultBit}, carry out = ${carryOut}`;
+        return `Step ${currentStep + 1}: Bit ${bitPos} (LSB→MSB): ${bitA} + ${bitB} + carry(${carryIn}) = ${resultBit}, carry out = ${carryOut}`;
+      } else if (operation === 'SUB') {
+        const bitA = binaryA[stringIdx];
+        const bitB = binaryB[stringIdx];
+        const resultBit = result[stringIdx];
+        return `Step ${currentStep + 1}: Bit ${bitPos} (LSB→MSB): ${bitA} - ${bitB} = ${resultBit}${bitPos === 7 ? ' (2\'s complement if negative)' : ''}`;
       } else {
-        const bitA = binaryA[bitIndex];
-        const bitB = binaryB[bitIndex];
-        const resultBit = result[bitIndex];
-        return `Step ${currentStep + 1}: Bit ${7 - bitIndex}: ${bitA} ${operation} ${bitB} = ${resultBit}`;
+        const bitA = binaryA[stringIdx];
+        const bitB = binaryB[stringIdx];
+        const resultBit = result[stringIdx];
+        return `Step ${currentStep + 1}: Bit ${bitPos} (LSB→MSB): ${bitA} ${operation} ${bitB} = ${resultBit}`;
       }
     } else {
-      return `Step ${currentStep + 1}: Output = ${result} (${parseInt(result, 2)})`;
+      const decimalValue = parseInt(result, 2);
+      const is2sComplement = operation === 'SUB' && (inputA - inputB) < 0;
+      const actualValue = is2sComplement ? -(256 - decimalValue) : decimalValue;
+      return `Step ${currentStep + 1}: Output = ${result} (${decimalValue} in unsigned${is2sComplement ? `, ${actualValue} in signed 2's complement` : ''})`;
     }
   };
 
@@ -136,23 +146,27 @@ export const StepByStepCalculation = ({
         {/* Carry Row (for addition) */}
         {operation === 'ADD' && currentStep > 1 && (
           <div className="font-mono">
-            <div className="text-xs text-muted-foreground mb-1">Carry:</div>
+            <div className="text-xs text-muted-foreground mb-1">Carry (LSB→MSB):</div>
             <div className="flex gap-2 justify-center">
-              {carries.slice(0, -1).map((carry, idx) => (
-                <div
-                  key={idx}
-                  className={`
-                    w-8 h-8 flex items-center justify-center text-sm rounded
-                    transition-all
-                    ${idx <= currentStep - 1 && carry === 1
-                      ? 'bg-accent text-accent-foreground glow-amber'
-                      : 'bg-muted/30 text-muted-foreground'
-                    }
-                  `}
-                >
-                  {idx <= currentStep - 1 ? carry : '·'}
-                </div>
-              ))}
+              {carries.slice(0, -1).map((carry, idx) => {
+                const bitPos = 7 - idx; // Convert string index to bit position
+                const isActive = bitPos <= (currentStep - 2);
+                return (
+                  <div
+                    key={idx}
+                    className={`
+                      w-8 h-8 flex items-center justify-center text-sm rounded
+                      transition-all
+                      ${isActive && carry === 1
+                        ? 'bg-accent text-accent-foreground glow-amber'
+                        : 'bg-muted/30 text-muted-foreground'
+                      }
+                    `}
+                  >
+                    {isActive ? carry : '·'}
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
@@ -163,20 +177,24 @@ export const StepByStepCalculation = ({
           <div className="flex items-center gap-4">
             <span className="text-sm text-muted-foreground w-8">A:</span>
             <div className="flex gap-2">
-              {binaryA.split('').map((bit, idx) => (
-                <div
-                  key={idx}
-                  className={`
-                    w-8 h-8 flex items-center justify-center rounded
-                    ${currentStep > 1 && idx <= currentStep - 2
-                      ? 'bg-primary/20 text-primary border border-primary'
-                      : 'bg-muted/30 text-foreground'
-                    }
-                  `}
-                >
-                  {bit}
-                </div>
-              ))}
+              {binaryA.split('').map((bit, idx) => {
+                const bitPos = 7 - idx; // Bit position from LSB
+                const isActive = currentStep > 1 && bitPos <= (currentStep - 2);
+                return (
+                  <div
+                    key={idx}
+                    className={`
+                      w-8 h-8 flex items-center justify-center rounded
+                      ${isActive
+                        ? 'bg-primary/20 text-primary border border-primary'
+                        : 'bg-muted/30 text-foreground'
+                      }
+                    `}
+                  >
+                    {bit}
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -187,20 +205,24 @@ export const StepByStepCalculation = ({
                 {operation === 'ADD' ? '+' : operation === 'SUB' ? '-' : operation.toLowerCase()}:
               </span>
               <div className="flex gap-2">
-                {binaryB.split('').map((bit, idx) => (
-                  <div
-                    key={idx}
-                    className={`
-                      w-8 h-8 flex items-center justify-center rounded
-                      ${currentStep > 1 && idx <= currentStep - 2
-                        ? 'bg-primary/20 text-primary border border-primary'
-                        : 'bg-muted/30 text-foreground'
-                      }
-                    `}
-                  >
-                    {bit}
-                  </div>
-                ))}
+                {binaryB.split('').map((bit, idx) => {
+                  const bitPos = 7 - idx;
+                  const isActive = currentStep > 1 && bitPos <= (currentStep - 2);
+                  return (
+                    <div
+                      key={idx}
+                      className={`
+                        w-8 h-8 flex items-center justify-center rounded
+                        ${isActive
+                          ? 'bg-primary/20 text-primary border border-primary'
+                          : 'bg-muted/30 text-foreground'
+                        }
+                      `}
+                    >
+                      {bit}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -212,20 +234,24 @@ export const StepByStepCalculation = ({
           <div className="flex items-center gap-4">
             <span className="text-sm text-secondary w-8">=</span>
             <div className="flex gap-2">
-              {result.split('').map((bit, idx) => (
-                <div
-                  key={idx}
-                  className={`
-                    w-8 h-8 flex items-center justify-center rounded font-bold
-                    ${currentStep > 1 && idx <= currentStep - 2
-                      ? 'bg-secondary text-secondary-foreground glow-green animate-pulse-glow'
-                      : 'bg-muted/30 text-muted-foreground'
-                    }
-                  `}
-                >
-                  {currentStep > 1 && idx <= currentStep - 2 ? bit : '·'}
-                </div>
-              ))}
+              {result.split('').map((bit, idx) => {
+                const bitPos = 7 - idx;
+                const isActive = currentStep > 1 && bitPos <= (currentStep - 2);
+                return (
+                  <div
+                    key={idx}
+                    className={`
+                      w-8 h-8 flex items-center justify-center rounded font-bold
+                      ${isActive
+                        ? 'bg-secondary text-secondary-foreground glow-green animate-pulse-glow'
+                        : 'bg-muted/30 text-muted-foreground'
+                      }
+                    `}
+                  >
+                    {isActive ? bit : '·'}
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>

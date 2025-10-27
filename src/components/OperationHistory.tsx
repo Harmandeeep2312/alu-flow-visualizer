@@ -58,7 +58,8 @@ export const OperationHistory = ({ history, onClear }: OperationHistoryProps) =>
                   {formatBinary(entry.inputA)} {entry.operation === 'NOT' ? '' : `${entry.operation === 'ADD' ? '+' : entry.operation === 'SUB' ? '-' : entry.operation.toLowerCase()} ${formatBinary(entry.inputB)}`} = {formatBinary(entry.result)}
                 </div>
                 <div className="text-xs text-muted-foreground mt-1">
-                  ({entry.inputA} {entry.operation === 'NOT' ? '' : `${entry.operation === 'ADD' ? '+' : entry.operation === 'SUB' ? '-' : entry.operation.toLowerCase()} ${entry.inputB}`} = {entry.result})
+                  ({entry.inputA} {entry.operation === 'NOT' ? '' : `${entry.operation === 'ADD' ? '+' : entry.operation === 'SUB' ? '-' : entry.operation.toLowerCase()} ${entry.inputB}`} = {entry.result}
+                  {entry.operation === 'SUB' && (entry.inputA - entry.inputB) < 0 ? ` → 2's complement of ${entry.inputA - entry.inputB}` : ''})
                 </div>
               </div>
             ))}
