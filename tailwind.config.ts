@@ -80,10 +80,26 @@ export default {
             height: "0",
           },
         },
+        "signal-flow": {
+          "0%": { left: "-100%" },
+          "100%": { left: "100%" },
+        },
+        "pulse-glow": {
+          "0%, 100%": { opacity: "1", filter: "brightness(1)" },
+          "50%": { opacity: "0.8", filter: "brightness(1.3)" },
+        },
+        "bit-process": {
+          "0%": { transform: "translateX(-10px)", opacity: "0" },
+          "50%": { transform: "translateX(0)", opacity: "1" },
+          "100%": { transform: "translateX(10px)", opacity: "0" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "signal-flow": "signal-flow 2s linear infinite",
+        "pulse-glow": "pulse-glow 2s ease-in-out infinite",
+        "bit-process": "bit-process 0.6s ease-in-out",
       },
     },
   },
